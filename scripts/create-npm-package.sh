@@ -24,7 +24,6 @@ fi
 
 echo "Creating npm package version: $VERSION"
 
-
 rm -rf npm-package
 mkdir -p npm-package
 cd npm-package
@@ -62,7 +61,9 @@ cp ../scripts/install.js ./
 mkdir -p bin
 cat > "bin/$CLI_NAME" << 'EOF'
 #!/bin/bash
-echo 'Installing...'
+# This is a placeholder - the real binary will be downloaded by install.js
+echo "Error: Binary not installed correctly. Please run: npm install"
+exit 1
 EOF
 chmod +x "bin/$CLI_NAME"
 

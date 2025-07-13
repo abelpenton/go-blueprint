@@ -31,12 +31,17 @@ class BinaryInstaller {
     
     this.binaryName = this.platform === 'win32' ? `${CONFIG.binaryName}.exe` : CONFIG.binaryName;
     this.cliName = this.platform === 'win32' ? `${CONFIG.cliName}.exe` : CONFIG.cliName;
-    this.archiveName = `${CONFIG.binaryName}_${this.mappedPlatform}_${this.mappedArch}.tar.gz`;
-    this.downloadUrl = `${CONFIG.repoUrl}/releases/download/v${this.version}/${this.archiveName}`;
+    
+    // Try different archive naming patterns that GoReleaser might use
+    this.possibleArchiveNames = [
+      `${CONFIG.binaryName}_${this.mappedPlatform}_${this.mappedArch}.tar.gz`,
+      `${CONFIG.binaryName}_${this.platform}_${this.mappedArch}.tar.gz`,
+      `${CONFIG.binaryName}_${this.mappedPlatform.toLowerCase()}_${this.mappedArch}.tar.gz`,
+      `${CONFIG.binaryName}_${this.platform}_${this.arch}.tar.gz`
+    ];
     
     this.binDir = path.join(__dirname, 'bin');
     this.targetBinary = path.join(this.binDir, this.cliName);
-    this.tempArchive = path.join(__dirname, this.archiveName);
   }
 
   validatePlatform() {
@@ -72,9 +77,12 @@ class BinaryInstaller {
   }
 
   cleanupTempFiles() {
-    if (fs.existsSync(this.tempArchive)) {
-      fs.unlinkSync(this.tempArchive);
-    }
+    this.possibleArchiveNames.forEach(archiveName => {
+      const tempArchive = path.join(__dirname, archiveName);
+      if (fs.existsSync(tempArchive)) {
+        fs.unlinkSync(tempArchive);
+      }
+    });
   }
 
   downloadWithRedirects(url, maxRedirects = CONFIG.maxRedirects) {
@@ -98,16 +106,18 @@ class BinaryInstaller {
           return;
         }
         
-        const file = fs.createWriteStream(this.tempArchive);
+        const archiveName = url.split('/').pop();
+        const tempArchive = path.join(__dirname, archiveName);
+        const file = fs.createWriteStream(tempArchive);
         response.pipe(file);
         
         file.on('finish', () => {
           file.close();
-          resolve();
+          resolve(tempArchive);
         });
         
         file.on('error', (error) => {
-          fs.unlink(this.tempArchive, () => {});
+          fs.unlink(tempArchive, () => {});
           reject(error);
         });
       });
@@ -118,31 +128,82 @@ class BinaryInstaller {
     });
   }
 
-  extractArchive() {
+  async tryDownloadArchive() {
+    let lastError;
+    
+    for (const archiveName of this.possibleArchiveNames) {
+      const downloadUrl = `${CONFIG.repoUrl}/releases/download/v${this.version}/${archiveName}`;
+      
+      try {
+        console.log(`Trying to download: ${downloadUrl}`);
+        const tempArchive = await this.downloadWithRedirects(downloadUrl);
+        return tempArchive;
+      } catch (error) {
+        console.log(`Failed to download ${archiveName}: ${error.message}`);
+        lastError = error;
+        continue;
+      }
+    }
+    
+    throw lastError || new Error('No suitable archive found');
+  }
+
+  extractArchive(tempArchive) {
     try {
       if (this.platform === 'win32') {        
         try {
-          execSync(`tar -xzf "${this.tempArchive}"`, { stdio: 'inherit' });
+          execSync(`tar -xzf "${tempArchive}"`, { stdio: 'inherit' });
         } catch (tarError) {
           console.log('tar command failed, trying PowerShell...');
-          execSync(`powershell -command "tar -xzf '${this.tempArchive}'"`, { stdio: 'inherit' });
+          execSync(`powershell -command "tar -xzf '${tempArchive}'"`, { stdio: 'inherit' });
         }
       } else {
-        execSync(`tar -xzf "${this.tempArchive}"`, { stdio: 'inherit' });
+        execSync(`tar -xzf "${tempArchive}"`, { stdio: 'inherit' });
       }
     } catch (error) {
       throw new Error(`Extraction failed: ${error.message}`);
     }
   }
 
-  installBinary() {
-    const extractedBinary = path.join(__dirname, this.binaryName);
-    
-    if (!fs.existsSync(extractedBinary)) {
-      console.log('Available files:', fs.readdirSync(__dirname));
-      throw new Error('Binary not found in extracted archive');
+  findExtractedBinary() {
+    // Look for the binary in various possible locations
+    const possiblePaths = [
+      path.join(__dirname, this.binaryName),
+      path.join(__dirname, CONFIG.binaryName),
+      path.join(__dirname, `${CONFIG.binaryName}_${this.mappedPlatform}_${this.mappedArch}`, this.binaryName),
+      path.join(__dirname, `${CONFIG.binaryName}_${this.platform}_${this.mappedArch}`, this.binaryName)
+    ];
+
+    for (const possiblePath of possiblePaths) {
+      if (fs.existsSync(possiblePath)) {
+        return possiblePath;
+      }
     }
 
+    // If not found, list available files for debugging
+    console.log('Available files after extraction:', fs.readdirSync(__dirname));
+    
+    // Try to find any executable file
+    const files = fs.readdirSync(__dirname);
+    for (const file of files) {
+      const filePath = path.join(__dirname, file);
+      try {
+        const stat = fs.statSync(filePath);
+        if (stat.isFile() && (file.includes(CONFIG.binaryName) || file.endsWith('.exe'))) {
+          return filePath;
+        }
+      } catch (e) {
+        // Ignore stat errors
+      }
+    }
+
+    throw new Error('Binary not found in extracted archive');
+  }
+
+  installBinary() {
+    const extractedBinary = this.findExtractedBinary();
+    
+    console.log(`Found binary at: ${extractedBinary}`);
     fs.renameSync(extractedBinary, this.targetBinary);
     
     if (this.platform !== 'win32') {
@@ -154,12 +215,14 @@ class BinaryInstaller {
     try {
       const files = fs.readdirSync(__dirname);
       files.forEach(file => {
-        if (!['package.json', 'install.js', 'bin', 'README.md'].includes(file)) {
+        if (!['package.json', 'install.js', 'bin', 'README.md', 'node_modules'].includes(file)) {
           const filePath = path.join(__dirname, file);
           try {
             const stat = fs.statSync(filePath);
             if (stat.isFile()) {
               fs.unlinkSync(filePath);
+            } else if (stat.isDirectory()) {
+              fs.rmSync(filePath, { recursive: true, force: true });
             }
           } catch (e) {
             // Ignore cleanup errors
@@ -180,20 +243,21 @@ class BinaryInstaller {
         return;
       }
 
-      console.log(`Downloading ${this.downloadUrl}...`);
+      console.log(`Installing ${CONFIG.binaryName} v${this.version} for ${this.platform}-${this.arch}...`);
       
       this.prepareBinDirectory();
       this.cleanupTempFiles();
       
-      await this.downloadWithRedirects(this.downloadUrl);
+      const tempArchive = await this.tryDownloadArchive();
       
-      this.extractArchive();
+      this.extractArchive(tempArchive);
       this.installBinary();
       
       console.log('Installation completed successfully!');
       
     } catch (error) {
       console.error('Installation failed:', error.message);
+      console.error('Make sure the release exists at:', `${CONFIG.repoUrl}/releases/tag/v${this.version}`);
       process.exit(1);
     } finally {
       this.cleanupTempFiles();
