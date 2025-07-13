@@ -37,6 +37,17 @@ gives the option to integrate with one of the more popular Go frameworks (and th
   Install
 </h2>
 
+### Homebrew(macOS/Linux) Install
+```bash
+brew install go-blueprint
+```
+
+### NPM Install
+```bash
+npm install go-blueprint
+```
+
+### Go Install
 ```bash
 go install github.com/melkeydev/go-blueprint@latest
 ```

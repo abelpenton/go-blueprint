@@ -27,3 +27,20 @@ jobs:
           workdir: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - 
+        name: Create npm package
+        run: |
+          set -euo pipefail
+          
+          VERSION=${GITHUB_REF}
+          echo "Creating npm package version: $VERSION"
+          
+          ./scripts/create-npm-package.sh "$VERSION"
+
+      - name: Publish to npm
+        run: |
+          cd npm-package
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
