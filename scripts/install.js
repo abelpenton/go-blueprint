@@ -3,6 +3,22 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+const CONFIG = {
+  binaryName: 'go-blueprint',
+  cliName: 'go-blueprint',
+  repoUrl: 'https://github.com/Melkeydev/go-blueprint',
+  maxRedirects: 5,
+  platformMap: {
+    'darwin': 'Darwin',
+    'linux': 'Linux',
+    'win32': 'Windows'
+  },
+  archMap: {
+    'x64': 'x86_64',
+    'arm64': 'arm64'
+  }
+};
+
 class BinaryInstaller {
   constructor() {
     this.platform = process.platform;
