@@ -6,7 +6,7 @@ const { execSync } = require('child_process');
 const CONFIG = {
   binaryName: 'go-blueprint',
   cliName: 'go-blueprint',
-  repoUrl: 'https://github.com/Melkeydev/go-blueprint',
+  repoUrl: 'https://github.com/abelpenton/go-blueprint',
   maxRedirects: 5,
   platformMap: {
     'darwin': 'Darwin',
