@@ -137,7 +137,7 @@ class BinaryInstaller {
     let lastError;
     
     for (const archiveName of this.possibleArchiveNames) {
-      const downloadUrl = `${CONFIG.repoUrl}/releases/download/v${this.version}/${archiveName}`;
+      const downloadUrl = `${CONFIG.repoUrl}/releases/download/${this.version}/${archiveName}`;
       
       try {
         console.log(`Trying to download: ${downloadUrl}`);
@@ -298,7 +298,7 @@ class BinaryInstaller {
       
     } catch (error) {
       console.error('Installation failed:', error.message);
-      console.error('Make sure the release exists at:', `${CONFIG.repoUrl}/releases/tag/v${this.version}`);
+      console.error('Make sure the release exists at:', `${CONFIG.repoUrl}/releases/tag/${this.version}`);
       process.exit(1);
     } finally {
       this.cleanupTempFiles();
