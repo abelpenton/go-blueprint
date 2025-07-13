@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-readonly PACKAGE_NAME="go-blueprint"
+readonly PACKAGE_NAME="go-blueprint-beta"
 readonly AUTHOR="abelpenton"
 readonly REPO_URL="https://github.com/abelpenton/go-blueprint"
 readonly BINARY_NAME="go-blueprint"
