@@ -32,8 +32,10 @@ class BinaryInstaller {
     this.binaryName = this.platform === 'win32' ? `${CONFIG.binaryName}.exe` : CONFIG.binaryName;
     this.cliName = this.platform === 'win32' ? `${CONFIG.cliName}.exe` : CONFIG.cliName;
     
-    // Try different archive naming patterns that GoReleaser might use
+    // gorelease name_template: {{- .ProjectName }}_ {{- .Version }}_ {{- title .Os }}_ {{- if eq .Arch "amd64" }}x86_64 {{- else if eq .Arch "386" }}i386 {{- else }}{{ .Arch }}{{ end }}
     this.possibleArchiveNames = [
+      `${CONFIG.binaryName}_${this.version}_${this.mappedPlatform}_${this.mappedArch}.tar.gz`,
+      `${CONFIG.binaryName}_v${this.version}_${this.mappedPlatform}_${this.mappedArch}.tar.gz`,
       `${CONFIG.binaryName}_${this.mappedPlatform}_${this.mappedArch}.tar.gz`,
       `${CONFIG.binaryName}_${this.platform}_${this.mappedArch}.tar.gz`,
       `${CONFIG.binaryName}_${this.mappedPlatform.toLowerCase()}_${this.mappedArch}.tar.gz`,
@@ -166,10 +168,11 @@ class BinaryInstaller {
   }
 
   findExtractedBinary() {
-    // Look for the binary in various possible locations
     const possiblePaths = [
       path.join(__dirname, this.binaryName),
       path.join(__dirname, CONFIG.binaryName),
+      path.join(__dirname, `${CONFIG.binaryName}_${this.version}_${this.mappedPlatform}_${this.mappedArch}`, this.binaryName),
+      path.join(__dirname, `${CONFIG.binaryName}_v${this.version}_${this.mappedPlatform}_${this.mappedArch}`, this.binaryName),
       path.join(__dirname, `${CONFIG.binaryName}_${this.mappedPlatform}_${this.mappedArch}`, this.binaryName),
       path.join(__dirname, `${CONFIG.binaryName}_${this.platform}_${this.mappedArch}`, this.binaryName)
     ];
@@ -180,10 +183,9 @@ class BinaryInstaller {
       }
     }
 
-    // If not found, list available files for debugging
+
     console.log('Available files after extraction:', fs.readdirSync(__dirname));
     
-    // Try to find any executable file
     const files = fs.readdirSync(__dirname);
     for (const file of files) {
       const filePath = path.join(__dirname, file);
@@ -191,6 +193,15 @@ class BinaryInstaller {
         const stat = fs.statSync(filePath);
         if (stat.isFile() && (file.includes(CONFIG.binaryName) || file.endsWith('.exe'))) {
           return filePath;
+        }
+        
+        if (stat.isDirectory()) {
+          const dirFiles = fs.readdirSync(filePath);
+          for (const dirFile of dirFiles) {
+            if (dirFile === this.binaryName || dirFile === CONFIG.binaryName) {
+              return path.join(filePath, dirFile);
+            }
+          }
         }
       } catch (e) {
         // Ignore stat errors
