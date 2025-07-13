@@ -57,7 +57,7 @@ cat > package.json << EOF
 }
 EOF
 
-cp ../install.js ./
+cp ../scripts/install.js ./
 
 mkdir -p bin
 cat > "bin/$CLI_NAME" << 'EOF'
