@@ -38,7 +38,7 @@ class BinaryInstaller {
     // goreleaser name template: {{- .ProjectName }}_ {{- .Version }}_ {{- title .Os }}_ {{- if eq .Arch "amd64" }}x86_64 {{- else if eq .Arch "386" }}i386 {{- else }}{{ .Arch }}{{ end }}
     this.possibleArchiveNames = [
       `${CONFIG.binaryName}_${this.version}_${this.mappedPlatform}_${this.mappedArch}.${archiveFormat}`,
-      `${CONFIG.binaryName}_v${this.version}_${this.mappedPlatform}_${this.mappedArch}.${archiveFormat}`,
+      `${CONFIG.binaryName}_${this.version}_${this.mappedPlatform}_${this.mappedArch}.${archiveFormat}`,
       `${CONFIG.binaryName}_${this.mappedPlatform}_${this.mappedArch}.${archiveFormat}`,
       `${CONFIG.binaryName}_${this.platform}_${this.mappedArch}.${archiveFormat}`,
       `${CONFIG.binaryName}_${this.mappedPlatform.toLowerCase()}_${this.mappedArch}.${archiveFormat}`,
