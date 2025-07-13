@@ -32,14 +32,17 @@ class BinaryInstaller {
     this.binaryName = this.platform === 'win32' ? `${CONFIG.binaryName}.exe` : CONFIG.binaryName;
     this.cliName = this.platform === 'win32' ? `${CONFIG.cliName}.exe` : CONFIG.cliName;
     
-    // gorelease name_template: {{- .ProjectName }}_ {{- .Version }}_ {{- title .Os }}_ {{- if eq .Arch "amd64" }}x86_64 {{- else if eq .Arch "386" }}i386 {{- else }}{{ .Arch }}{{ end }}
+
+    const archiveFormat = this.platform === 'win32' ? 'zip' : 'tar.gz';
+    
+    // goreleaser name template: {{- .ProjectName }}_ {{- .Version }}_ {{- title .Os }}_ {{- if eq .Arch "amd64" }}x86_64 {{- else if eq .Arch "386" }}i386 {{- else }}{{ .Arch }}{{ end }}
     this.possibleArchiveNames = [
-      `${CONFIG.binaryName}_${this.version}_${this.mappedPlatform}_${this.mappedArch}.tar.gz`,
-      `${CONFIG.binaryName}_v${this.version}_${this.mappedPlatform}_${this.mappedArch}.tar.gz`,
-      `${CONFIG.binaryName}_${this.mappedPlatform}_${this.mappedArch}.tar.gz`,
-      `${CONFIG.binaryName}_${this.platform}_${this.mappedArch}.tar.gz`,
-      `${CONFIG.binaryName}_${this.mappedPlatform.toLowerCase()}_${this.mappedArch}.tar.gz`,
-      `${CONFIG.binaryName}_${this.platform}_${this.arch}.tar.gz`
+      `${CONFIG.binaryName}_${this.version}_${this.mappedPlatform}_${this.mappedArch}.${archiveFormat}`,
+      `${CONFIG.binaryName}_v${this.version}_${this.mappedPlatform}_${this.mappedArch}.${archiveFormat}`,
+      `${CONFIG.binaryName}_${this.mappedPlatform}_${this.mappedArch}.${archiveFormat}`,
+      `${CONFIG.binaryName}_${this.platform}_${this.mappedArch}.${archiveFormat}`,
+      `${CONFIG.binaryName}_${this.mappedPlatform.toLowerCase()}_${this.mappedArch}.${archiveFormat}`,
+      `${CONFIG.binaryName}_${this.platform}_${this.arch}.${archiveFormat}`
     ];
     
     this.binDir = path.join(__dirname, 'bin');
@@ -152,15 +155,43 @@ class BinaryInstaller {
 
   extractArchive(tempArchive) {
     try {
-      if (this.platform === 'win32') {        
-        try {
-          execSync(`tar -xzf "${tempArchive}"`, { stdio: 'inherit' });
-        } catch (tarError) {
-          console.log('tar command failed, trying PowerShell...');
-          execSync(`powershell -command "tar -xzf '${tempArchive}'"`, { stdio: 'inherit' });
+      const isZip = tempArchive.endsWith('.zip');
+      
+      if (isZip) {
+        // Handle ZIP files (Windows)
+        if (this.platform === 'win32') {
+          try {
+            // Try PowerShell first on Windows
+            execSync(`powershell -command "Expand-Archive -Path '${tempArchive}' -DestinationPath '.' -Force"`, { stdio: 'inherit' });
+          } catch (psError) {
+            console.log('PowerShell extraction failed, trying tar...');
+            try {
+              execSync(`tar -xf "${tempArchive}"`, { stdio: 'inherit' });
+            } catch (tarError) {
+              throw new Error(`Both PowerShell and tar extraction failed: ${psError.message}`);
+            }
+          }
+        } else {
+          // On Unix-like systems, try unzip command
+          try {
+            execSync(`unzip -o "${tempArchive}"`, { stdio: 'inherit' });
+          } catch (unzipError) {
+            // Fallback to tar if unzip is not available
+            execSync(`tar -xf "${tempArchive}"`, { stdio: 'inherit' });
+          }
         }
       } else {
-        execSync(`tar -xzf "${tempArchive}"`, { stdio: 'inherit' });
+        // Handle TAR.GZ files (Linux/macOS)
+        if (this.platform === 'win32') {        
+          try {
+            execSync(`tar -xzf "${tempArchive}"`, { stdio: 'inherit' });
+          } catch (tarError) {
+            console.log('tar command failed, trying PowerShell...');
+            execSync(`powershell -command "tar -xzf '${tempArchive}'"`, { stdio: 'inherit' });
+          }
+        } else {
+          execSync(`tar -xzf "${tempArchive}"`, { stdio: 'inherit' });
+        }
       }
     } catch (error) {
       throw new Error(`Extraction failed: ${error.message}`);
@@ -183,7 +214,6 @@ class BinaryInstaller {
       }
     }
 
-
     console.log('Available files after extraction:', fs.readdirSync(__dirname));
     
     const files = fs.readdirSync(__dirname);
@@ -194,7 +224,7 @@ class BinaryInstaller {
         if (stat.isFile() && (file.includes(CONFIG.binaryName) || file.endsWith('.exe'))) {
           return filePath;
         }
-        
+        // Also check inside directories
         if (stat.isDirectory()) {
           const dirFiles = fs.readdirSync(filePath);
           for (const dirFile of dirFiles) {
