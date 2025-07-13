@@ -33,9 +33,10 @@ jobs:
         run: |
           set -euo pipefail
           
-          VERSION=${GITHUB_REF}
+          VERSION=${GITHUB_REF_NAME}
           echo "Creating npm package version: $VERSION"
           
+          chmod +x ./scripts/create-npm-package.sh
           ./scripts/create-npm-package.sh "$VERSION"
 
       - name: Publish to npm
