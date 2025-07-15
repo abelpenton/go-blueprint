@@ -3,7 +3,7 @@
 set -euo pipefail
 
 VERSION="$1"
-PACKAGE_NAME="go-blueprint"
+PACKAGE_NAME="go-blueprint-beta-npm"
 MAIN_PACKAGE_DIR="npm-package"
 PLATFORM_PACKAGES_DIR="platform-packages"
 
