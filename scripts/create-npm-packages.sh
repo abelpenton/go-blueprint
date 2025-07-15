@@ -74,9 +74,9 @@ for archive in dist/*.tar.gz dist/*.zip; do
   "files": ["bin/"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/melkeydev/go-blueprint.git"
+    "url": "https://github.com/abelpenton/go-blueprint.git"
   },
-  "author": "Melkey",
+  "author": "Abel Penton",
   "license": "MIT"
 }
 EOF
@@ -278,13 +278,13 @@ cat > "$MAIN_PACKAGE_DIR/package.json" << EOF
     $OPTIONAL_DEPS
   },
   "keywords": ["go", "golang", "cli", "scaffold", "template"],
-  "author": "Melkey",
+  "author": "Abel Penton",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/melkeydev/go-blueprint.git"
+    "url": "https://github.com/abelpenton/go-blueprint.git"
   },
-  "homepage": "https://github.com/melkeydev/go-blueprint",
+  "homepage": "https://github.com/abelpenton/go-blueprint",
   "engines": {
     "node": ">=14.0.0"
   },
