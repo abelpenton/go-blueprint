@@ -16,7 +16,7 @@ declare -A PLATFORM_MAP=(
     ["go-blueprint_${VERSION}_Darwin_arm64"]="darwin-arm64"
     ["go-blueprint_${VERSION}_Linux_x86_64"]="linux-x64"
     ["go-blueprint_${VERSION}_Linux_arm64"]="linux-arm64"
-    ["go-blueprint_${VERSION}_Windows_x86_64"]="win32-x64"
+    #["go-blueprint_${VERSION}_Windows_x86_64"]="win32-x64"
     ["go-blueprint_${VERSION}_Windows_arm64"]="win32-arm64"
 )
 
@@ -25,7 +25,7 @@ declare -A OS_MAP=(
     ["darwin-arm64"]="darwin"
     ["linux-x64"]="linux"
     ["linux-arm64"]="linux"
-    ["win32-x64"]="win32"
+    #["win32-x64"]="win32"
     ["win32-arm64"]="win32"
 )
 
@@ -34,7 +34,7 @@ declare -A CPU_MAP=(
     ["darwin-arm64"]="arm64"
     ["linux-x64"]="x64"
     ["linux-arm64"]="arm64"
-    ["win32-x64"]="x64"
+    #["win32-x64"]="x64"
     ["win32-arm64"]="arm64"
 )
 
@@ -101,7 +101,7 @@ const BINARY_DISTRIBUTION_PACKAGES = {
   'darwin-arm64': 'go-blueprint-darwin-arm64',
   'linux-x64': 'go-blueprint-linux-x64',
   'linux-arm64': 'go-blueprint-linux-arm64',
-  'win32-x64': 'go-blueprint-win32-x64',
+  //'win32-x64': 'go-blueprint-win32-x64',
   'win32-arm64': 'go-blueprint-win32-arm64',
 }
 
@@ -230,7 +230,7 @@ function getBinaryPath() {
     'darwin-arm64': 'go-blueprint-darwin-arm64',
     'linux-x64': 'go-blueprint-linux-x64',
     'linux-arm64': 'go-blueprint-linux-arm64',
-    'win32-x64': 'go-blueprint-win32-x64',
+    //'win32-x64': 'go-blueprint-win32-x64',
     'win32-arm64': 'go-blueprint-win32-arm64',
   }
 
@@ -306,7 +306,7 @@ function getBinaryPath() {
     'darwin-arm64': 'go-blueprint-darwin-arm64',
     'linux-x64': 'go-blueprint-linux-x64',
     'linux-arm64': 'go-blueprint-linux-arm64',
-    'win32-x64': 'go-blueprint-win32-x64',
+    //'win32-x64': 'go-blueprint-win32-x64',
     'win32-arm64': 'go-blueprint-win32-arm64',
   }
 
