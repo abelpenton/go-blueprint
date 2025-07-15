@@ -96,12 +96,12 @@ const zlib = require('zlib')
 const https = require('https')
 
 const BINARY_DISTRIBUTION_PACKAGES = {
-  'darwin-x64': 'go-blueprint-darwin-x64',
-  'darwin-arm64': 'go-blueprint-darwin-arm64',
-  'linux-x64': 'go-blueprint-linux-x64',
-  'linux-arm64': 'go-blueprint-linux-arm64',
-  //'win32-x64': 'go-blueprint-win32-x64',
-  'win32-arm64': 'go-blueprint-win32-arm64',
+  'darwin-x64': 'go-blueprint-beta-npm-darwin-x64',
+  'darwin-arm64': 'go-blueprint-beta-npm-darwin-arm64',
+  'linux-x64': 'go-blueprint-beta-npm-linux-x64',
+  'linux-arm64': 'go-blueprint-beta-npm-linux-arm64',
+  //'win32-x64': 'go-blueprint-beta-npm-win32-x64',
+  'win32-arm64': 'go-blueprint-beta-npm-win32-arm64',
 }
 
 const packageJson = require('./package.json')
@@ -283,12 +283,12 @@ const { execFileSync } = require('child_process')
 
 function getBinaryPath() {
   const BINARY_DISTRIBUTION_PACKAGES = {
-    'darwin-x64': 'go-blueprint-darwin-x64',
-    'darwin-arm64': 'go-blueprint-darwin-arm64',
-    'linux-x64': 'go-blueprint-linux-x64',
-    'linux-arm64': 'go-blueprint-linux-arm64',
-    //'win32-x64': 'go-blueprint-win32-x64',
-    'win32-arm64': 'go-blueprint-win32-arm64',
+    'darwin-x64': 'go-blueprint-beta-npm-darwin-x64',
+    'darwin-arm64': 'go-blueprint-beta-npm-darwin-arm64',
+    'linux-x64': 'go-blueprint-beta-npm-linux-x64',
+    'linux-arm64': 'go-blueprint-beta-npm-linux-arm64',
+    //'win32-x64': 'go-blueprint-beta-npm-win32-x64',
+    'win32-arm64': 'go-blueprint-beta-npm-win32-arm64',
   }
 
   const binaryName = process.platform === 'win32' ? 'go-blueprint.exe' : 'go-blueprint'
