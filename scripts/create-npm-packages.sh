@@ -38,6 +38,19 @@ declare -A CPU_MAP=(
     ["win32-arm64"]="arm64"
 )
 
+# Generate platform configuration for JavaScript files
+PLATFORM_CONFIG="{"
+FIRST_ENTRY=true
+for platform_key in "${!OS_MAP[@]}"; do
+    if [ "$FIRST_ENTRY" = true ]; then
+        FIRST_ENTRY=false
+    else
+        PLATFORM_CONFIG="$PLATFORM_CONFIG,"
+    fi
+    PLATFORM_CONFIG="$PLATFORM_CONFIG'$platform_key': '$PACKAGE_NAME-$platform_key'"
+done
+PLATFORM_CONFIG="$PLATFORM_CONFIG}"
+
 OPTIONAL_DEPS=""
 for archive in dist/*.tar.gz dist/*.zip; do
     if [ -f "$archive" ]; then
@@ -89,29 +102,126 @@ EOF
     fi
 done
 
+cat > "$MAIN_PACKAGE_DIR/constants.js" << EOF
+const BINARY_DISTRIBUTION_PACKAGES = $PLATFORM_CONFIG
+
+const BINARY_DISTRIBUTION_VERSION = require('./package.json').version
+
+function getBinaryName() {
+  if (process.platform === 'win32') {
+    return 'go-blueprint.exe'
+  }
+  
+  const shell = process.env.SHELL || ''
+  
+  if (shell.includes('zsh')) {
+    return 'go-blueprint.zsh'
+  } else if (shell.includes('fish')) {
+    return 'go-blueprint.fish'
+  } else {
+    return 'go-blueprint.bash'
+  }
+}
+
+function getPlatformPackageName() {
+  return BINARY_DISTRIBUTION_PACKAGES[\`\${process.platform}-\${process.arch}\`]
+}
+
+function getAllBinaryNames() {
+  if (process.platform === 'win32') {
+    return ['go-blueprint.exe']
+  }
+  return ['go-blueprint.bash', 'go-blueprint.fish', 'go-blueprint.zsh']
+}
+
+module.exports = {
+  BINARY_DISTRIBUTION_PACKAGES,
+  BINARY_DISTRIBUTION_VERSION,
+  getBinaryName,
+  getPlatformPackageName,
+  getAllBinaryNames
+}
+EOF
+
+cat > "$MAIN_PACKAGE_DIR/utils.js" << 'EOF'
+const path = require('path')
+const fs = require('fs')
+const { getBinaryName, getPlatformPackageName, getAllBinaryNames } = require('./constants')
+
+function getBinaryPath() {
+  const binaryName = getBinaryName()
+  const platformSpecificPackageName = getPlatformPackageName()
+
+  try {
+    const resolvedPath = require.resolve(`${platformSpecificPackageName}/bin/${binaryName}`)
+    if (fs.existsSync(resolvedPath)) {
+      return resolvedPath
+    }
+  } catch (e) {
+  }
+
+  if (process.platform !== 'win32') {
+    const allBinaryNames = getAllBinaryNames()
+    for (const binName of allBinaryNames) {
+      try {
+        const resolvedPath = require.resolve(`${platformSpecificPackageName}/bin/${binName}`)
+        if (fs.existsSync(resolvedPath)) {
+          return resolvedPath
+        }
+      } catch (e) {
+      }
+    }
+  }
+
+  const localPath = path.join(__dirname, binaryName)
+  if (fs.existsSync(localPath)) {
+    return localPath
+  }
+
+  if (process.platform !== 'win32') {
+    const allBinaryNames = getAllBinaryNames()
+    for (const binName of allBinaryNames) {
+      const fallbackPath = path.join(__dirname, binName)
+      if (fs.existsSync(fallbackPath)) {
+        return fallbackPath
+      }
+    }
+  }
+
+  return path.join(__dirname, binaryName)
+}
+
+function isPlatformSpecificPackageInstalled() {
+  const platformSpecificPackageName = getPlatformPackageName()
+  
+  const allBinaryNames = getAllBinaryNames()
+  for (const binName of allBinaryNames) {
+    try {
+      require.resolve(`${platformSpecificPackageName}/bin/${binName}`)
+      return true
+    } catch (e) {
+    }
+  }
+  
+  return false
+}
+
+module.exports = {
+  getBinaryPath,
+  isPlatformSpecificPackageInstalled
+}
+EOF
+
 cat > "$MAIN_PACKAGE_DIR/install.js" << 'EOF'
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
 const https = require('https')
+const { BINARY_DISTRIBUTION_VERSION, getAllBinaryNames, getPlatformPackageName } = require('./constants')
+const { isPlatformSpecificPackageInstalled } = require('./utils')
 
-const BINARY_DISTRIBUTION_PACKAGES = {
-  'darwin-x64': 'go-blueprint-beta-npm-darwin-x64',
-  'darwin-arm64': 'go-blueprint-beta-npm-darwin-arm64',
-  'linux-x64': 'go-blueprint-beta-npm-linux-x64',
-  'linux-arm64': 'go-blueprint-beta-npm-linux-arm64',
-  //'win32-x64': 'go-blueprint-beta-npm-win32-x64',
-  'win32-arm64': 'go-blueprint-beta-npm-win32-arm64',
-}
-
-const packageJson = require('./package.json')
-const BINARY_DISTRIBUTION_VERSION = packageJson.version
-
-const binaryName = process.platform === 'win32' ? 'go-blueprint.exe' : 'go-blueprint'
-
-const platformSpecificPackageName = BINARY_DISTRIBUTION_PACKAGES[`${process.platform}-${process.arch}`]
-
-const fallbackBinaryPath = path.join(__dirname, binaryName)
+const platformSpecificPackageName = getPlatformPackageName()
+const allBinaryNames = getAllBinaryNames()
 
 function makeRequest(url) {
   return new Promise((resolve, reject) => {
@@ -169,26 +279,27 @@ async function downloadBinaryFromNpm() {
     )
     const tarballBuffer = zlib.gunzipSync(tarballDownloadBuffer)
     
-    const binaryData = extractFileFromTarball(tarballBuffer, `package/bin/${binaryName}`)
+    let downloadedCount = 0
     
-    if (!binaryData) {
-      throw new Error(`Binary ${binaryName} not found in package`)
+    for (const binaryName of allBinaryNames) {
+      const binaryData = extractFileFromTarball(tarballBuffer, `package/bin/${binaryName}`)
+      
+      if (binaryData) {
+        const fallbackBinaryPath = path.join(__dirname, binaryName)
+        fs.writeFileSync(fallbackBinaryPath, binaryData, { mode: 0o755 })
+        console.log(`Binary downloaded and installed to ${fallbackBinaryPath}`)
+        downloadedCount++
+      }
     }
     
-    fs.writeFileSync(fallbackBinaryPath, binaryData, { mode: 0o755 })
-    console.log(`Binary downloaded and installed to ${fallbackBinaryPath}`)
+    if (downloadedCount === 0) {
+      throw new Error(`No binaries found in package. Expected: ${allBinaryNames.join(', ')}`)
+    }
+    
+    console.log(`Successfully downloaded ${downloadedCount} binary(ies)`)
   } catch (error) {
     console.error('Failed to download binary:', error.message)
     process.exit(1)
-  }
-}
-
-function isPlatformSpecificPackageInstalled() {
-  try {
-    require.resolve(`${platformSpecificPackageName}/bin/${binaryName}`)
-    return true
-  } catch (e) {
-    return false
   }
 }
 
@@ -208,29 +319,8 @@ EOF
 cat > "$MAIN_PACKAGE_DIR/bin/go-blueprint" << 'EOF'
 #!/usr/bin/env node
 
-const path = require('path')
 const { execFileSync } = require('child_process')
-
-function getBinaryPath() {
-  const BINARY_DISTRIBUTION_PACKAGES = {
-    'darwin-x64': 'go-blueprint-beta-npm-darwin-x64',
-    'darwin-arm64': 'go-blueprint-beta-npm-darwin-arm64',
-    'linux-x64': 'go-blueprint-beta-npm-linux-x64',
-    'linux-arm64': 'go-blueprint-beta-npm-linux-arm64',
-    //'win32-x64': 'go-blueprint-beta-npm-win32-x64',
-    'win32-arm64': 'go-blueprint-beta-npm-win32-arm64',
-  }
-
-  const binaryName = process.platform === 'win32' ? 'go-blueprint.exe' : 'go-blueprint'
-
-  const platformSpecificPackageName = BINARY_DISTRIBUTION_PACKAGES[`${process.platform}-${process.arch}`]
-
-  try {
-    return require.resolve(`${platformSpecificPackageName}/bin/${binaryName}`)
-  } catch (e) {
-    return path.join(__dirname, '..', binaryName)
-  }
-}
+const { getBinaryPath } = require('../utils')
 
 try {
   const binaryPath = getBinaryPath()
@@ -272,34 +362,16 @@ cat > "$MAIN_PACKAGE_DIR/package.json" << EOF
   "files": [
     "bin/",
     "install.js",
-    "index.js"
+    "index.js",
+    "constants.js",
+    "utils.js"
   ]
 }
 EOF
 
 cat > "$MAIN_PACKAGE_DIR/index.js" << 'EOF'
-const path = require('path')
 const { execFileSync } = require('child_process')
-
-function getBinaryPath() {
-  const BINARY_DISTRIBUTION_PACKAGES = {
-    'darwin-x64': 'go-blueprint-beta-npm-darwin-x64',
-    'darwin-arm64': 'go-blueprint-beta-npm-darwin-arm64',
-    'linux-x64': 'go-blueprint-beta-npm-linux-x64',
-    'linux-arm64': 'go-blueprint-beta-npm-linux-arm64',
-    //'win32-x64': 'go-blueprint-beta-npm-win32-x64',
-    'win32-arm64': 'go-blueprint-beta-npm-win32-arm64',
-  }
-
-  const binaryName = process.platform === 'win32' ? 'go-blueprint.exe' : 'go-blueprint'
-  const platformSpecificPackageName = BINARY_DISTRIBUTION_PACKAGES[`${process.platform}-${process.arch}`]
-
-  try {
-    return require.resolve(`${platformSpecificPackageName}/bin/${binaryName}`)
-  } catch (e) {
-    return path.join(__dirname, binaryName)
-  }
-}
+const { getBinaryPath } = require('./utils')
 
 module.exports = {
   getBinaryPath,
