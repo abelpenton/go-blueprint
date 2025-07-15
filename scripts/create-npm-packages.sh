@@ -95,7 +95,6 @@ const path = require('path')
 const zlib = require('zlib')
 const https = require('https')
 
-// Lookup table for all platforms and binary distribution packages
 const BINARY_DISTRIBUTION_PACKAGES = {
   'darwin-x64': 'go-blueprint-darwin-x64',
   'darwin-arm64': 'go-blueprint-darwin-arm64',
@@ -105,17 +104,13 @@ const BINARY_DISTRIBUTION_PACKAGES = {
   'win32-arm64': 'go-blueprint-win32-arm64',
 }
 
-// Get version from package.json
 const packageJson = require('./package.json')
 const BINARY_DISTRIBUTION_VERSION = packageJson.version
 
-// Windows binaries end with .exe
 const binaryName = process.platform === 'win32' ? 'go-blueprint.exe' : 'go-blueprint'
 
-// Determine package name for this platform
 const platformSpecificPackageName = BINARY_DISTRIBUTION_PACKAGES[`${process.platform}-${process.arch}`]
 
-// Compute the path we want to emit the fallback binary to
 const fallbackBinaryPath = path.join(__dirname, binaryName)
 
 function makeRequest(url) {
@@ -133,7 +128,6 @@ function makeRequest(url) {
           response.statusCode < 400 &&
           response.headers.location
         ) {
-          // Follow redirects
           makeRequest(response.headers.location).then(resolve, reject)
         } else {
           reject(
@@ -150,7 +144,6 @@ function makeRequest(url) {
 }
 
 function extractFileFromTarball(tarballBuffer, filepath) {
-  // Tar archives are organized in 512 byte blocks
   let offset = 0
   while (offset < tarballBuffer.length) {
     const header = tarballBuffer.subarray(offset, offset + 512)
@@ -162,7 +155,6 @@ function extractFileFromTarball(tarballBuffer, filepath) {
       return tarballBuffer.subarray(offset, offset + fileSize)
     }
     
-    // Clamp offset to the upper multiple of 512
     offset = (offset + fileSize + 511) & ~511
   }
 }
@@ -170,14 +162,13 @@ function extractFileFromTarball(tarballBuffer, filepath) {
 async function downloadBinaryFromNpm() {
   try {
     console.log('Downloading binary from npm registry...')
-    
-    // Download the tarball of the right binary distribution package
+    const npmRegistryUrl = `https://registry.npmjs.org/${platformSpecificPackageName}/-/${platformSpecificPackageName}-${BINARY_DISTRIBUTION_VERSION}.tgz`
+    console.log(`Fetching tarball from ${npmRegistryUrl}`)
     const tarballDownloadBuffer = await makeRequest(
-      `https://registry.npmjs.org/${platformSpecificPackageName}/-/${platformSpecificPackageName}-${BINARY_DISTRIBUTION_VERSION}.tgz`
+      npmRegistryUrl
     )
     const tarballBuffer = zlib.gunzipSync(tarballDownloadBuffer)
     
-    // Extract binary from package and write to disk
     const binaryData = extractFileFromTarball(tarballBuffer, `package/bin/${binaryName}`)
     
     if (!binaryData) {
@@ -194,7 +185,6 @@ async function downloadBinaryFromNpm() {
 
 function isPlatformSpecificPackageInstalled() {
   try {
-    // Resolving will fail if the optionalDependency was not installed
     require.resolve(`${platformSpecificPackageName}/bin/${binaryName}`)
     return true
   } catch (e) {
@@ -207,7 +197,6 @@ if (!platformSpecificPackageName) {
   process.exit(1)
 }
 
-// Skip downloading the binary if it was already installed via optionalDependencies
 if (!isPlatformSpecificPackageInstalled()) {
   console.log('Platform specific package not found. Will manually download binary.')
   downloadBinaryFromNpm()
@@ -216,7 +205,6 @@ if (!isPlatformSpecificPackageInstalled()) {
 }
 EOF
 
-# Create the binary wrapper for CLI usage
 cat > "$MAIN_PACKAGE_DIR/bin/go-blueprint" << 'EOF'
 #!/usr/bin/env node
 
@@ -224,7 +212,6 @@ const path = require('path')
 const { execFileSync } = require('child_process')
 
 function getBinaryPath() {
-  // Lookup table for all platforms and binary distribution packages
   const BINARY_DISTRIBUTION_PACKAGES = {
     'darwin-x64': 'go-blueprint-darwin-x64',
     'darwin-arm64': 'go-blueprint-darwin-arm64',
@@ -234,17 +221,13 @@ function getBinaryPath() {
     'win32-arm64': 'go-blueprint-win32-arm64',
   }
 
-  // Windows binaries end with .exe
   const binaryName = process.platform === 'win32' ? 'go-blueprint.exe' : 'go-blueprint'
 
-  // Determine package name for this platform
   const platformSpecificPackageName = BINARY_DISTRIBUTION_PACKAGES[`${process.platform}-${process.arch}`]
 
   try {
-    // Try to resolve from optionalDependency first
     return require.resolve(`${platformSpecificPackageName}/bin/${binaryName}`)
   } catch (e) {
-    // Fall back to manually downloaded binary
     return path.join(__dirname, '..', binaryName)
   }
 }
@@ -258,10 +241,8 @@ try {
 }
 EOF
 
-# Make the CLI wrapper executable
 chmod +x "$MAIN_PACKAGE_DIR/bin/go-blueprint"
 
-# Create the main package.json
 cat > "$MAIN_PACKAGE_DIR/package.json" << EOF
 {
   "name": "go-blueprint-beta-npm",
@@ -277,7 +258,7 @@ cat > "$MAIN_PACKAGE_DIR/package.json" << EOF
   "optionalDependencies": {
     $OPTIONAL_DEPS
   },
-  "keywords": ["go", "golang", "cli", "template"],
+  "keywords": ["go", "golang", "cli"],
   "author": "Abel Penton",
   "license": "MIT",
   "repository": {
@@ -328,10 +309,3 @@ module.exports = {
   }
 }
 EOF
-
-echo "✅ Created main package at $MAIN_PACKAGE_DIR"
-echo "✅ Created platform-specific packages at $PLATFORM_PACKAGES_DIR"
-echo ""
-echo "Next steps:"
-echo "1. Publish platform-specific packages first"
-echo "2. Then publish the main package"

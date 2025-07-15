@@ -60,9 +60,6 @@ jobs:
               cd - > /dev/null
             fi
           done
-          
-          echo "Waiting for npm to propagate platform packages..."
-          sleep 30
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
