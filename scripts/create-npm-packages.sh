@@ -38,7 +38,6 @@ declare -A CPU_MAP=(
     ["win32-arm64"]="arm64"
 )
 
-# Generate platform configuration for JavaScript files
 PLATFORM_CONFIG="{"
 FIRST_ENTRY=true
 for platform_key in "${!OS_MAP[@]}"; do
@@ -67,11 +66,12 @@ for archive in dist/*.tar.gz dist/*.zip; do
             mkdir -p "$platform_package_dir/bin"
             
             if [[ "$archive" == *.tar.gz ]]; then
-                tar -xzf "$archive" -C "$platform_package_dir/bin" --strip-components=1
+                tar -xzf "$archive" -C "$platform_package_dir/bin"
             else
                 unzip -j "$archive" -d "$platform_package_dir/bin"
             fi
             
+            ls -l "$platform_package_dir/bin"
             chmod +x "$platform_package_dir/bin/"*
             
             os_value="${OS_MAP[$platform_key]}"
@@ -112,15 +112,7 @@ function getBinaryName() {
     return 'go-blueprint.exe'
   }
   
-  const shell = process.env.SHELL || ''
-  
-  if (shell.includes('zsh')) {
-    return 'go-blueprint.zsh'
-  } else if (shell.includes('fish')) {
-    return 'go-blueprint.fish'
-  } else {
-    return 'go-blueprint.bash'
-  }
+  return 'go-blueprint'
 }
 
 function getPlatformPackageName() {
@@ -131,7 +123,7 @@ function getAllBinaryNames() {
   if (process.platform === 'win32') {
     return ['go-blueprint.exe']
   }
-  return ['go-blueprint.bash', 'go-blueprint.fish', 'go-blueprint.zsh']
+  return ['go-blueprint']
 }
 
 module.exports = {
@@ -335,7 +327,7 @@ chmod +x "$MAIN_PACKAGE_DIR/bin/go-blueprint"
 
 cat > "$MAIN_PACKAGE_DIR/package.json" << EOF
 {
-  "name": "go-blueprint-beta-npm",
+  "name": "$PACKAGE_NAME",
   "version": "$VERSION",
   "description": "A CLI for scaffolding Go projects with modern tooling",
   "main": "index.js",
