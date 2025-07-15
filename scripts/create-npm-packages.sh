@@ -264,7 +264,7 @@ chmod +x "$MAIN_PACKAGE_DIR/bin/go-blueprint"
 # Create the main package.json
 cat > "$MAIN_PACKAGE_DIR/package.json" << EOF
 {
-  "name": "go-blueprint",
+  "name": "go-blueprint-beta-npm",
   "version": "$VERSION",
   "description": "A CLI for scaffolding Go projects with modern tooling",
   "main": "index.js",
@@ -277,7 +277,7 @@ cat > "$MAIN_PACKAGE_DIR/package.json" << EOF
   "optionalDependencies": {
     $OPTIONAL_DEPS
   },
-  "keywords": ["go", "golang", "cli", "scaffold", "template"],
+  "keywords": ["go", "golang", "cli", "template"],
   "author": "Abel Penton",
   "license": "MIT",
   "repository": {
