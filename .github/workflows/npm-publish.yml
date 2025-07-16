@@ -1,14 +1,18 @@
 name: npm-publish
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["goreleaser"]
+    types: [completed]
 
 jobs:
   npm-publish:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
       
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -20,13 +24,18 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Get the latest release tag
-          LATEST_TAG=$(git describe --tags --abbrev=0)
+          LATEST_TAG="${{ github.event.workflow_run.head_branch }}"
+          
+          if [[ "$LATEST_TAG" == refs/tags/* ]]; then
+            LATEST_TAG="${LATEST_TAG#refs/tags/}"
+          else
+            LATEST_TAG=$(git describe --tags --abbrev=0)
+          fi
+          
           VERSION=${LATEST_TAG#v}
+          echo "Downloading assets for version: $VERSION (tag: $LATEST_TAG)"
+          echo "Triggered by workflow run on: ${{ github.event.workflow_run.head_branch }}"
           
-          echo "Downloading assets for version: $VERSION"
-          
-          # Create dist directory
           mkdir -p dist
           
           # Download all release assets
@@ -40,8 +49,6 @@ jobs:
         run: |
           set -euo pipefail
           
-          LATEST_TAG=$(git describe --tags --abbrev=0)
-          VERSION=${LATEST_TAG#v}
           echo "Creating npm packages for version: $VERSION"
           
           chmod +x ./scripts/create-npm-packages.sh
