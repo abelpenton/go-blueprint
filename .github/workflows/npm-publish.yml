@@ -1,0 +1,77 @@
+name: npm-publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  npm-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Download release assets
+        run: |
+          set -euo pipefail
+          
+          # Get the latest release tag
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          VERSION=${LATEST_TAG#v}
+          
+          echo "Downloading assets for version: $VERSION"
+          
+          # Create dist directory
+          mkdir -p dist
+          
+          # Download all release assets
+          gh release download "$LATEST_TAG" --dir dist
+          
+          ls -la dist/
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create npm packages
+        run: |
+          set -euo pipefail
+          
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          VERSION=${LATEST_TAG#v}
+          echo "Creating npm packages for version: $VERSION"
+          
+          chmod +x ./scripts/create-npm-packages.sh
+          ./scripts/create-npm-packages.sh "$VERSION"
+
+      - name: Publish platform-specific packages to npm
+        run: |
+          set -euo pipefail
+          
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+          
+          for platform_dir in platform-packages/go-blueprint-*; do
+            if [ -d "$platform_dir" ]; then
+              echo "Publishing $(basename $platform_dir)..."
+              cd "$platform_dir"
+              npm publish --access public
+              cd - > /dev/null
+            fi
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish main package to npm
+        run: |
+          set -euo pipefail
+          
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+          
+          cd npm-package
+          echo "Publishing main go-blueprint package..."
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

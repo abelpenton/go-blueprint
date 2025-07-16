@@ -122,13 +122,15 @@ cat > "$MAIN_PACKAGE_DIR/bin/go-blueprint" << 'EOF'
 
 const { execFileSync } = require('child_process')
 
+const packageName = 'go-blueprint-beta-npm'
+
 const platformPackages = {
-  'darwin-x64': 'go-blueprint-beta-npm-darwin-x64',
-  'darwin-arm64': 'go-blueprint-beta-npm-darwin-arm64',
-  'linux-x64': 'go-blueprint-beta-npm-linux-x64',
-  'linux-arm64': 'go-blueprint-beta-npm-linux-arm64',
-  'win32-x64': 'go-blueprint-beta-npm-win32-x64',
-  'win32-arm64': 'go-blueprint-beta-npm-win32-arm64'
+  'darwin-x64': `${packageName}-darwin-x64`,
+  'darwin-arm64': `${packageName}-darwin-arm64`,
+  'linux-x64': `${packageName}-linux-x64`,
+  'linux-arm64': `${packageName}-linux-arm64`,
+  'win32-x64': `${packageName}-win32-x64`,
+  'win32-arm64': `${packageName}-win32-arm64`
 }
 
 function getBinaryPath() {
@@ -196,13 +198,15 @@ const path = require('path')
 
 const binaryName = process.platform === 'win32' ? 'go-blueprint.exe' : 'go-blueprint'
 
+const packageName = 'go-blueprint-beta-npm'
+
 const platformPackages = {
-  'darwin-x64': 'go-blueprint-beta-npm-darwin-x64',
-  'darwin-arm64': 'go-blueprint-beta-npm-darwin-arm64',
-  'linux-x64': 'go-blueprint-beta-npm-linux-x64',
-  'linux-arm64': 'go-blueprint-beta-npm-linux-arm64',
-  'win32-x64': 'go-blueprint-beta-npm-win32-x64',
-  'win32-arm64': 'go-blueprint-beta-npm-win32-arm64'
+  'darwin-x64': `${packageName}-darwin-x64`,
+  'darwin-arm64': `${packageName}-darwin-arm64`,
+  'linux-x64': `${packageName}-linux-x64`,
+  'linux-arm64': `${packageName}-linux-arm64`,
+  'win32-x64': `${packageName}-win32-x64`,
+  'win32-arm64': `${packageName}-win32-arm64`
 }
 
 function getBinaryPath() {
