@@ -125,26 +125,18 @@ function getPlatformPackageName() {
   return BINARY_DISTRIBUTION_PACKAGES[\`\${process.platform}-\${process.arch}\`]
 }
 
-function getAllBinaryNames() {
-  if (process.platform === 'win32') {
-    return ['go-blueprint.exe']
-  }
-  return ['go-blueprint']
-}
-
 module.exports = {
   BINARY_DISTRIBUTION_PACKAGES,
   BINARY_DISTRIBUTION_VERSION,
   getBinaryName,
   getPlatformPackageName,
-  getAllBinaryNames
 }
 EOF
 
 cat > "$MAIN_PACKAGE_DIR/utils.js" << 'EOF'
 const path = require('path')
 const fs = require('fs')
-const { getBinaryName, getPlatformPackageName, getAllBinaryNames } = require('./constants')
+const { getBinaryName, getPlatformPackageName } = require('./constants')
 
 function getBinaryPath() {
   const binaryName = getBinaryName()
@@ -158,32 +150,9 @@ function getBinaryPath() {
   } catch (e) {
   }
 
-  if (process.platform !== 'win32') {
-    const allBinaryNames = getAllBinaryNames()
-    for (const binName of allBinaryNames) {
-      try {
-        const resolvedPath = require.resolve(`${platformSpecificPackageName}/bin/${binName}`)
-        if (fs.existsSync(resolvedPath)) {
-          return resolvedPath
-        }
-      } catch (e) {
-      }
-    }
-  }
-
   const localPath = path.join(__dirname, binaryName)
   if (fs.existsSync(localPath)) {
     return localPath
-  }
-
-  if (process.platform !== 'win32') {
-    const allBinaryNames = getAllBinaryNames()
-    for (const binName of allBinaryNames) {
-      const fallbackPath = path.join(__dirname, binName)
-      if (fs.existsSync(fallbackPath)) {
-        return fallbackPath
-      }
-    }
   }
 
   return path.join(__dirname, binaryName)
@@ -191,14 +160,12 @@ function getBinaryPath() {
 
 function isPlatformSpecificPackageInstalled() {
   const platformSpecificPackageName = getPlatformPackageName()
-  
-  const allBinaryNames = getAllBinaryNames()
-  for (const binName of allBinaryNames) {
-    try {
-      require.resolve(`${platformSpecificPackageName}/bin/${binName}`)
-      return true
-    } catch (e) {
-    }
+  const binaryName = getBinaryName()
+
+  try {
+    require.resolve(`${platformSpecificPackageName}/bin/${binaryName}`)
+    return true
+  } catch (e) {
   }
   
   return false
@@ -215,12 +182,10 @@ const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
 const https = require('https')
-const { BINARY_DISTRIBUTION_VERSION, getAllBinaryNames, getPlatformPackageName } = require('./constants')
+const { BINARY_DISTRIBUTION_VERSION, getPlatformPackageName, getBinaryName } = require('./constants')
 const { isPlatformSpecificPackageInstalled } = require('./utils')
 
 const platformSpecificPackageName = getPlatformPackageName()
-const allBinaryNames = getAllBinaryNames()
-
 function makeRequest(url) {
   return new Promise((resolve, reject) => {
     https
@@ -278,20 +243,18 @@ async function downloadBinaryFromNpm() {
     const tarballBuffer = zlib.gunzipSync(tarballDownloadBuffer)
     
     let downloadedCount = 0
-    
-    for (const binaryName of allBinaryNames) {
-      const binaryData = extractFileFromTarball(tarballBuffer, `package/bin/${binaryName}`)
+    const binaryName = getBinaryName()
+    const binaryData = extractFileFromTarball(tarballBuffer, `package/bin/${binaryName}`)
       
-      if (binaryData) {
-        const fallbackBinaryPath = path.join(__dirname, binaryName)
-        fs.writeFileSync(fallbackBinaryPath, binaryData, { mode: 0o755 })
-        console.log(`Binary downloaded and installed to ${fallbackBinaryPath}`)
-        downloadedCount++
-      }
+    if (binaryData) {
+      const fallbackBinaryPath = path.join(__dirname, binaryName)
+      fs.writeFileSync(fallbackBinaryPath, binaryData, { mode: 0o755 })
+      console.log(`Binary downloaded and installed to ${fallbackBinaryPath}`)
+      downloadedCount++
     }
     
     if (downloadedCount === 0) {
-      throw new Error(`No binaries found in package. Expected: ${allBinaryNames.join(', ')}`)
+      throw new Error(`No binaries found in package. Expected: ${binaryName}`)
     }
     
     console.log(`Successfully downloaded ${downloadedCount} binary(ies)`)
