@@ -12,8 +12,8 @@ rm -rf "$MAIN_PACKAGE_DIR" "$PLATFORM_PACKAGES_DIR"
 mkdir -p "$MAIN_PACKAGE_DIR/bin" "$PLATFORM_PACKAGES_DIR"
 
 declare -A PLATFORM_MAP=(
-    ["go-blueprint_${VERSION}_Darwin_x86_64"]="darwin-x64"
-    ["go-blueprint_${VERSION}_Darwin_arm64"]="darwin-arm64"
+    ["go-blueprint_${VERSION}_Darwin_all"]="darwin-all"
+    #["go-blueprint_${VERSION}_Darwin_all"]="darwin-arm64"
     ["go-blueprint_${VERSION}_Linux_x86_64"]="linux-x64"
     ["go-blueprint_${VERSION}_Linux_arm64"]="linux-arm64"
     #["go-blueprint_${VERSION}_Windows_x86_64"]="win32-x64"
@@ -21,8 +21,8 @@ declare -A PLATFORM_MAP=(
 )
 
 declare -A OS_MAP=(
-    ["darwin-x64"]="darwin"
-    ["darwin-arm64"]="darwin"
+    ["darwin-all"]="darwin"
+    #["darwin-arm64"]="darwin"
     ["linux-x64"]="linux"
     ["linux-arm64"]="linux"
     #["win32-x64"]="win32"
@@ -30,8 +30,8 @@ declare -A OS_MAP=(
 )
 
 declare -A CPU_MAP=(
-    ["darwin-x64"]="x64"
-    ["darwin-arm64"]="arm64"
+    ["darwin-all"]="x64,arm64"
+    #["darwin-arm64"]="arm64"
     ["linux-x64"]="x64"
     ["linux-arm64"]="arm64"
     #["win32-x64"]="x64"
