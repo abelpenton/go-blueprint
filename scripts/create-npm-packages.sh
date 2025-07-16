@@ -12,8 +12,7 @@ rm -rf "$MAIN_PACKAGE_DIR" "$PLATFORM_PACKAGES_DIR"
 mkdir -p "$MAIN_PACKAGE_DIR/bin" "$PLATFORM_PACKAGES_DIR"
 
 declare -A PLATFORM_MAP=(
-    ["go-blueprint_${VERSION}_Darwin_all"]="darwin-all"
-    #["go-blueprint_${VERSION}_Darwin_all"]="darwin-arm64"
+    ["go-blueprint_${VERSION}_Darwin_all"]="darwin-x64,darwin-arm64"
     ["go-blueprint_${VERSION}_Linux_x86_64"]="linux-x64"
     ["go-blueprint_${VERSION}_Linux_arm64"]="linux-arm64"
     #["go-blueprint_${VERSION}_Windows_x86_64"]="win32-x64"
@@ -21,8 +20,8 @@ declare -A PLATFORM_MAP=(
 )
 
 declare -A OS_MAP=(
-    ["darwin-all"]="darwin"
-    #["darwin-arm64"]="darwin"
+    ["darwin-x64"]="darwin"
+    ["darwin-arm64"]="darwin"
     ["linux-x64"]="linux"
     ["linux-arm64"]="linux"
     #["win32-x64"]="win32"
@@ -30,8 +29,8 @@ declare -A OS_MAP=(
 )
 
 declare -A CPU_MAP=(
-    ["darwin-all"]="x64,arm64"
-    #["darwin-arm64"]="arm64"
+    ["darwin-x64"]="x64"
+    ["darwin-arm64"]="arm64"
     ["linux-x64"]="x64"
     ["linux-arm64"]="arm64"
     #["win32-x64"]="x64"
@@ -57,27 +56,35 @@ for archive in dist/*.tar.gz dist/*.zip; do
         archive_name="${archive_name%.tar.gz}"
         archive_name="${archive_name%.zip}"
         
-        platform_key="${PLATFORM_MAP[$archive_name]:-}"
+        platform_keys="${PLATFORM_MAP[$archive_name]:-}"
         
-        if [ -n "$platform_key" ]; then
-            echo "Processing $archive for platform $platform_key"
+        if [ -n "$platform_keys" ]; then
+            echo "Processing $archive for platforms: $platform_keys"
             
-            platform_package_dir="$PLATFORM_PACKAGES_DIR/$PACKAGE_NAME-$platform_key"
-            mkdir -p "$platform_package_dir/bin"
-            
-            if [[ "$archive" == *.tar.gz ]]; then
-                tar -xzf "$archive" -C "$platform_package_dir/bin"
-            else
-                unzip -j "$archive" -d "$platform_package_dir/bin"
-            fi
-            
-            ls -l "$platform_package_dir/bin"
-            chmod +x "$platform_package_dir/bin/"*
-            
-            os_value="${OS_MAP[$platform_key]}"
-            cpu_value="${CPU_MAP[$platform_key]}"
-            
-            cat > "$platform_package_dir/package.json" << EOF
+            # Split comma-separated platform keys
+            IFS=',' read -ra PLATFORM_ARRAY <<< "$platform_keys"
+            for platform_key in "${PLATFORM_ARRAY[@]}"; do
+                # Trim whitespace
+                platform_key=$(echo "$platform_key" | xargs)
+                
+                echo "  Creating package for platform: $platform_key"
+                
+                platform_package_dir="$PLATFORM_PACKAGES_DIR/$PACKAGE_NAME-$platform_key"
+                mkdir -p "$platform_package_dir/bin"
+                
+                if [[ "$archive" == *.tar.gz ]]; then
+                    tar -xzf "$archive" -C "$platform_package_dir/bin"
+                else
+                    unzip -j "$archive" -d "$platform_package_dir/bin"
+                fi
+                
+                ls -l "$platform_package_dir/bin"
+                chmod +x "$platform_package_dir/bin/"*
+                
+                os_value="${OS_MAP[$platform_key]}"
+                cpu_value="${CPU_MAP[$platform_key]}"
+                
+                cat > "$platform_package_dir/package.json" << EOF
 {
   "name": "$PACKAGE_NAME-$platform_key",
   "version": "$VERSION",
@@ -93,11 +100,12 @@ for archive in dist/*.tar.gz dist/*.zip; do
   "license": "MIT"
 }
 EOF
-            
-            if [ -n "$OPTIONAL_DEPS" ]; then
-                OPTIONAL_DEPS="$OPTIONAL_DEPS,"
-            fi
-            OPTIONAL_DEPS="$OPTIONAL_DEPS\"$PACKAGE_NAME-$platform_key\": \"$VERSION\""
+                
+                if [ -n "$OPTIONAL_DEPS" ]; then
+                    OPTIONAL_DEPS="$OPTIONAL_DEPS,"
+                fi
+                OPTIONAL_DEPS="$OPTIONAL_DEPS\"$PACKAGE_NAME-$platform_key\": \"$VERSION\""
+            done
         fi
     fi
 done
