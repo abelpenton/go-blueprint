@@ -76,11 +76,24 @@ for archive in dist/*.tar.gz dist/*.zip; do
                     unzip -j "$archive" -d "$platform_package_dir/bin"
                 fi
                 
+                for doc_file in README.md README README.txt LICENSE LICENSE.md LICENSE.txt; do
+                    if [ -f "$platform_package_dir/bin/$doc_file" ]; then
+                        mv "$platform_package_dir/bin/$doc_file" "$platform_package_dir/"
+                    fi
+                done
+                
                 ls -l "$platform_package_dir/bin"
                 chmod +x "$platform_package_dir/bin/"*
                 
                 os_value="${OS_MAP[$platform_key]}"
                 cpu_value="${CPU_MAP[$platform_key]}"
+                
+                files_array='["bin/"]'
+                for doc_file in README.md README README.txt LICENSE LICENSE.md LICENSE.txt; do
+                    if [ -f "$platform_package_dir/$doc_file" ]; then
+                        files_array="${files_array%]}, \"$doc_file\"]"
+                    fi
+                done
                 
                 cat > "$platform_package_dir/package.json" << EOF
 {
@@ -89,7 +102,7 @@ for archive in dist/*.tar.gz dist/*.zip; do
   "description": "Platform-specific binary for $PACKAGE_NAME ($platform_key)",
   "os": ["$os_value"],
   "cpu": ["$cpu_value"],
-  "files": ["bin/"],
+  "files": $files_array,
   "repository": {
     "type": "git",
     "url": "https://github.com/abelpenton/go-blueprint.git"
