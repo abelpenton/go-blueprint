@@ -1,18 +1,26 @@
 name: npm-publish
 
 on:
-  workflow_run:
-    workflows: [goreleaser]
-    types: [completed]
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Release tag to publish (e.g., v1.0.0)'
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish (e.g., v1.0.0)'
+        required: true
+        type: string
 
 jobs:
   npm-publish:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ inputs.tag }}
       
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -24,24 +32,20 @@ jobs:
         run: |
           set -euo pipefail
           
-          LATEST_TAG="${{ github.event.workflow_run.head_branch }}"
+          TAG="${{ inputs.tag }}"
+          VERSION=${TAG#v}
           
-          if [[ "$LATEST_TAG" == refs/tags/* ]]; then
-            LATEST_TAG="${LATEST_TAG#refs/tags/}"
-          else
-            LATEST_TAG=$(git describe --tags --abbrev=0)
-          fi
-          
-          VERSION=${LATEST_TAG#v}
-          echo "Downloading assets for version: $VERSION (tag: $LATEST_TAG)"
-          echo "Triggered by workflow run on: ${{ github.event.workflow_run.head_branch }}"
+          echo "Downloading assets for version: $VERSION (tag: $TAG)"
           
           mkdir -p dist
           
           # Download all release assets
-          gh release download "$LATEST_TAG" --dir dist
+          gh release download "$TAG" --dir dist
           
           ls -la dist/
+          
+          # Store the version for next steps
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
