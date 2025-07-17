@@ -17,6 +17,9 @@ on:
 jobs:
   npm-publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
@@ -50,7 +53,7 @@ jobs:
           for platform_dir in platform-packages/go-blueprint-*; do
             if [ -d "$platform_dir" ]; then
               cd "$platform_dir"
-              npm publish --access public
+              npm publish --provenance --access public
               cd - > /dev/null
             fi
           done
@@ -58,4 +61,4 @@ jobs:
       - name: Publish main package to npm
         run: |
           cd npm-package
-          npm publish --access public
+          npm publish --provenance --access public
