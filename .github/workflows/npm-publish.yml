@@ -22,13 +22,13 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
       
-      - name: Set up Node
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
       
-      - name: Extract version and download release assets
+      - name: Download release assets
         run: |
           TAG="${{ inputs.tag }}"
           VERSION=${TAG#v}
@@ -43,25 +43,23 @@ jobs:
           chmod +x ./scripts/create-npm-packages.sh
           ./scripts/create-npm-packages.sh "$VERSION"
 
-      - name: Configure NPM authentication
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
       - name: Publish platform-specific packages to npm
         run: |
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
           for platform_dir in platform-packages/go-blueprint-*; do
             if [ -d "$platform_dir" ]; then
-              echo "Publishing $(basename $platform_dir)..."
               cd "$platform_dir"
               npm publish --access public
               cd - > /dev/null
             fi
           done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish main package to npm
         run: |
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
           cd npm-package
           npm publish --access public
-       
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
