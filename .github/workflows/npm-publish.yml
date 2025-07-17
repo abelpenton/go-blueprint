@@ -14,10 +14,6 @@ on:
         required: true
         type: string
 
-env:
-  NODE_VERSION: '22'
-  REGISTRY_URL: 'https://registry.npmjs.org'
-
 jobs:
   npm-publish:
     runs-on: ubuntu-latest
@@ -30,8 +26,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          registry-url: ${{ env.REGISTRY_URL }}
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
       
       - name: Extract version and download release assets
         run: |
@@ -49,13 +45,11 @@ jobs:
         run: |
           chmod +x ./scripts/create-npm-packages.sh
           ./scripts/create-npm-packages.sh "$VERSION"
-          
-      - name: Configure NPM authentication
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
 
       - name: Publish platform-specific packages
-        run: |
+        run: |    
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          
           for platform_dir in platform-packages/go-blueprint-*; do
             if [ -d "$platform_dir" ]; then
               cd "$platform_dir"
@@ -67,4 +61,5 @@ jobs:
       - name: Publish main package
         run: |
           cd npm-package
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           npm publish --access public
