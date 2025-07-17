@@ -1,4 +1,4 @@
-name: NPM Publisher
+name: npm-publish
 
 on:
   workflow_call:
@@ -18,48 +18,50 @@ jobs:
   npm-publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code at release tag
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag }}
       
-      - name: Setup Node
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
       
       - name: Extract version and download release assets
         run: |
           TAG="${{ inputs.tag }}"
           VERSION=${TAG#v}
-          
           mkdir -p dist
           gh release download "$TAG" --dir dist
-          
           echo "VERSION=$VERSION" >> $GITHUB_ENV
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate NPM package structure
+      - name: Create npm packages
         run: |
           chmod +x ./scripts/create-npm-packages.sh
           ./scripts/create-npm-packages.sh "$VERSION"
 
-      - name: Publish platform-specific packages
-        run: |    
+      - name: Configure NPM authentication
+        run: |
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-          
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish platform-specific packages to npm
+        run: |
           for platform_dir in platform-packages/go-blueprint-*; do
             if [ -d "$platform_dir" ]; then
+              echo "Publishing $(basename $platform_dir)..."
               cd "$platform_dir"
               npm publish --access public
               cd - > /dev/null
             fi
           done
-          
-      - name: Publish main package
+
+      - name: Publish main package to npm
         run: |
           cd npm-package
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           npm publish --access public
+       
