@@ -5,7 +5,7 @@ set -euo pipefail
 VERSION="$1"
 PACKAGE_NAME="@abelpenton/go-blueprint-test"
 MAIN_PACKAGE_DIR="npm-package"
-PLATFORM_PACKAGES_DIR="platform-packages"
+PLATFORM_PACKAGES_DIR="platform-packages/@abelpenton"
 
 rm -rf "$MAIN_PACKAGE_DIR" "$PLATFORM_PACKAGES_DIR"
 
