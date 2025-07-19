@@ -5,7 +5,7 @@ set -euo pipefail
 VERSION="$1"
 PACKAGE_NAME="@abelpenton/go-blueprint-test"
 MAIN_PACKAGE_DIR="npm-package"
-PLATFORM_PACKAGES_DIR="platform-packages/@abelpenton"
+PLATFORM_PACKAGES_DIR="platform-packages"
 
 rm -rf "$MAIN_PACKAGE_DIR" "$PLATFORM_PACKAGES_DIR"
 
@@ -55,7 +55,7 @@ for archive in dist/*.tar.gz dist/*.zip; do
                 
                 echo "  Creating package for platform: $platform_key"
                 
-                platform_package_dir="$PLATFORM_PACKAGES_DIR/$PACKAGE_NAME-$platform_key"
+                platform_package_dir="$PLATFORM_PACKAGES_DIR/go-blueprint-$platform_key"
                 mkdir -p "$platform_package_dir/bin"
                 
                 if [[ "$archive" == *.tar.gz ]]; then
@@ -144,6 +144,7 @@ function getBinaryPath() {
 
   try {
     const binaryName = process.platform === 'win32' ? 'go-blueprint.exe' : 'go-blueprint'
+    const packagePath = platformPackageName.replace('@', '').replace('/', '-')
     return require.resolve(`${platformPackageName}/bin/${binaryName}`)
   } catch (e) {
     process.exit(1)
